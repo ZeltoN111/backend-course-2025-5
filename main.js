@@ -48,6 +48,17 @@ const server = http.createServer(async (req, res) => {
                 }
                 break;
 
+            case 'PUT':
+                const chunks = [];
+                req.on('data', chunk => chunks.push(chunk));
+                req.on('end', async () => {
+                    const body = Buffer.concat(chunks);
+                    await fsp.writeFile(filePath, body);
+                    res.writeHead(201, { 'Content-Type': 'text/plain; charset=utf-8' });
+                    res.end('Картинку збережено у кеші (201 Created)');
+                });
+                break;
+
             default:
                 res.writeHead(405, { 'Content-Type': 'text/plain; charset=utf-8' });
                 res.end('405 Method Not Allowed');
