@@ -1,0 +1,34 @@
+Частина 2:
+
+Спроба отримати картинку, якої немає в кеші
+curl -v http://localhost:3000/200
+
+Завантажити картинку в кеш
+curl -X PUT --data-binary "@cat200.jpg" http://localhost:3000/200
+
+Отримати вже кешовану картинку
+curl -v http://localhost:3000/200 --output downloaded.jpg
+
+Видалити картинку з кешу
+curl -X DELETE http://localhost:3000/200
+
+Спроба викликати непідтримуваний метод
+curl -X POST http://localhost:3000/200
+
+
+Частина 3:
+
+Отримати картинку з http.cat (якщо її немає в кеші — завантажить і збереже)
+curl -v http://localhost:3000/200 --output 200.jpg
+
+Тепер повторний запит — вже з кешу
+curl -v http://localhost:3000/200 --output 200_cached.jpg
+
+Спробувати неіснуючий код (наприклад /999)
+curl -v http://localhost:3000/999
+
+Видалити з кешу
+curl -X DELETE http://localhost:3000/200
+
+Перевірити, що після видалення знову завантажується з http.cat
+curl -v http://localhost:3000/200 --output 200_new.jpg

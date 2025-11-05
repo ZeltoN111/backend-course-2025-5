@@ -1,11 +1,10 @@
-// Імпортуємо необхідні модулі
 const { program } = require('commander');
 const http = require('node:http');
 const fs = require('node:fs');
 const fsp = require('node:fs').promises;
 const path = require('node:path');
+const superagent = require('superagent');
 
-// Налаштовуємо параметри командного рядка
 program
     .requiredOption('-h, --host <address>', 'адреса сервера')
     .requiredOption('-p, --port <number>', 'порт сервера')
@@ -14,37 +13,58 @@ program
 program.parse(process.argv);
 const options = program.opts();
 
-// Перевіряємо, чи існує директорія кешу, і створюємо її при необхідності
 if (!fs.existsSync(options.cache)) {
     fs.mkdirSync(options.cache, { recursive: true });
     console.log(`Створено директорію кешу: ${options.cache}`);
 }
 
-// Створюємо сервер
 const server = http.createServer(async (req, res) => {
     const urlParts = req.url.split('/');
-    const code = urlParts[1]; // Наприклад, /200 → code = "200"
+    const code = urlParts[1]; // /200 -> "200"
 
-    // Якщо не передано код у URL
     if (!code) {
         res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
         res.end('Помилка: не вказано HTTP код у запиті (наприклад /200)');
         return;
     }
 
-    // Повний шлях до файлу у кеші
     const filePath = path.join(options.cache, `${code}.jpg`);
 
     try {
         switch (req.method) {
             case 'GET':
                 try {
+                    // Пробуємо прочитати з кешу
                     const data = await fsp.readFile(filePath);
                     res.writeHead(200, { 'Content-Type': 'image/jpeg' });
                     res.end(data);
                 } catch {
-                    res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-                    res.end('404 Not Found: картинки немає у кеші');
+                    console.log(`Кеш відсутній для ${code}, завантажую з http.cat...`);
+                    try {
+                        // Завантаження з http.cat як буфера
+                        const response = await superagent
+                            .get(`https://http.cat/${code}`)
+                            .redirects(5) // дозволяє 308, 301 тощо
+                            .buffer(true) // читає весь потік
+                            .parse((res, callback) => {
+                                const data = [];
+                                res.on('data', chunk => data.push(chunk));
+                                res.on('end', () => callback(null, Buffer.concat(data)));
+                            });
+
+                        const imageData = response.body;
+
+                        // Збереження у кеш
+                        await fsp.writeFile(filePath, imageData);
+
+                        // Відправлення клієнту
+                        res.writeHead(200, { 'Content-Type': 'image/jpeg' });
+                        res.end(imageData);
+                    } catch (error) {
+                        console.error(`Не вдалося отримати https://http.cat/${code}:`, error.message);
+                        res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+                        res.end(`404 Not Found: немає картинки для коду ${code}`);
+                    }
                 }
                 break;
 
@@ -82,7 +102,6 @@ const server = http.createServer(async (req, res) => {
     }
 });
 
-// Запускаємо сервер
 server.listen(options.port, options.host, () => {
-    console.log(`Сервер працює на http://${options.host}:${options.port}`);
+    console.log(`Сервер запущено на http://${options.host}:${options.port}`);
 });
