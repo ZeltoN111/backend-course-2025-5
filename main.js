@@ -59,6 +59,17 @@ const server = http.createServer(async (req, res) => {
                 });
                 break;
 
+            case 'DELETE':
+                try {
+                    await fsp.unlink(filePath);
+                    res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+                    res.end('Картинку видалено з кешу (200 OK)');
+                } catch {
+                    res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+                    res.end('404 Not Found: немає такої картинки для видалення');
+                }
+                break;
+
             default:
                 res.writeHead(405, { 'Content-Type': 'text/plain; charset=utf-8' });
                 res.end('405 Method Not Allowed');
