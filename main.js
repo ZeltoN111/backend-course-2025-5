@@ -17,7 +17,7 @@ if (!fs.existsSync(options.cache)) {
     fs.mkdirSync(options.cache, { recursive: true });
     console.log(`Створено директорію кешу: ${options.cache}`);
 }
-
+    
 const server = http.createServer(async (req, res) => {
     const urlParts = req.url.split('/');
     const code = urlParts[1]; // /200 -> "200"
@@ -44,7 +44,6 @@ const server = http.createServer(async (req, res) => {
                         // Завантаження з http.cat як буфера
                         const response = await superagent
                             .get(`https://http.cat/${code}`)
-                            .redirects(5) // дозволяє 308, 301 тощо
                             .buffer(true) // читає весь потік
                             .parse((res, callback) => {
                                 const data = [];
